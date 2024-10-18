@@ -14,22 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    # Step 1: Checkout the repository
+    # Step 1: Checkout the repository with enough commit history
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 2  # Fetch the last 2 commits for comparison
 
-    # Step 2: Get the list of changed files
+    # Step 2: Get the list of changed files (handle new branches or shallow history)
     - name: Check for modified files
       id: file_check
       run: |
-        # Fallback if github.event.before is missing or bad
-        if [ -z "${{ github.event.before }}" ]; then
-          echo "No prior commit found, using HEAD~1 as the fallback."
+        # Check if the previous commit (HEAD~1) exists
+        if git rev-parse HEAD~1 >/dev/null 2>&1; then
+          echo "Previous commit found, performing diff."
           git diff --name-only HEAD~1 > changed_files.txt
         else
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt || git diff --name-only HEAD~1 > changed_files.txt
+          echo "No previous commit, comparing against the current commit."
+          git diff --name-only HEAD > changed_files.txt
         fi
 
-        # Display the modified files (for debugging)
+        # Display the changed files (for debugging)
+        echo "Changed files:"
         cat changed_files.txt
 
