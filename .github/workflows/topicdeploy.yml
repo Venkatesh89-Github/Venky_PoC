@@ -22,7 +22,14 @@ jobs:
     - name: Check for modified files
       id: file_check
       run: |
-        # Get the list of files modified in this commit
-        git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt
+        # Fallback if github.event.before is missing (e.g., first commit)
+        if [ -z "${{ github.event.before }}" ]; then
+          echo "No prior commit found, using HEAD~1 as the fallback."
+          git diff --name-only HEAD~1 > changed_files.txt
+        else
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt
+        fi
+
+        # Display the modified files (for debugging)
         cat changed_files.txt
 
