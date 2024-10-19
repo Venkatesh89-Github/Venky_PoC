@@ -2,11 +2,13 @@ name: Deploy Kafka Topics and ACLs
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'DEV*/**'  # Detect changes in any my_topics_* directories
-  pull_request:
-    paths:
-      - 'DEV*/**'
+  # pull_request:
+  #   paths:
+  #     - 'DEV*/**'
   workflow_dispatch:  # Allow manual triggers
 
 jobs:
