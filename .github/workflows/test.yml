@@ -1,0 +1,76 @@
+name: Create Kafka Topic and Store Details
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic_name:
+        description: 'Name of the Kafka topic'
+        required: true
+      partitions:
+        description: 'Number of partitions for the topic'
+        required: true
+      replication_factor:
+        description: 'Replication factor for the topic'
+        required: true
+
+jobs:
+  deploy_topic:
+    runs-on: ubuntu-latest
+
+    env:
+      KAFKA_BROKER: "<Your Kafka Broker URL>"
+      KAFKA_PORT: "9092"  # Adjust if needed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Topic Name
+        run: echo "TOPIC_NAME=${{ github.event.inputs.topic_name }}" >> $GITHUB_ENV
+
+      - name: Check if Topic Folder Exists
+        id: check_folder
+        run: |
+          if [ -d "./Dev/${{ env.TOPIC_NAME }}" ]; then
+            echo "Folder already exists"
+            echo "EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "Folder does not exist"
+            echo "EXISTS=false" >> $GITHUB_ENV
+
+      - name: Create Folder for Topic (If Not Exists)
+        if: env.EXISTS == 'false'
+        run: |
+          mkdir -p "./Dev/${{ env.TOPIC_NAME }}"
+          echo "Created folder for ${{ env.TOPIC_NAME }} at ./Dev/${{ env.TOPIC_NAME }}"
+
+      - name: Store Topic Configuration
+        if: env.EXISTS == 'false'
+        run: |
+          echo "topic_name: ${{ env.TOPIC_NAME }}" > "./Dev/${{ env.TOPIC_NAME }}/Topic.yaml"
+          echo "partitions: ${{ github.event.inputs.partitions }}" >> "./Dev/${{ env.TOPIC_NAME }}/Topic.yaml"
+          echo "replication_factor: ${{ github.event.inputs.replication_factor }}" >> "./Dev/${{ env.TOPIC_NAME }}/Topic.yaml"
+
+      - name: Create Topic ACL File (Optional Placeholder)
+        if: env.EXISTS == 'false'
+        run: |
+          echo "acl_rules:" > "./Dev/${{ env.TOPIC_NAME }}/TopicAcl.yaml"
+          echo "# Define ACL rules here if needed" >> "./Dev/${{ env.TOPIC_NAME }}/TopicAcl.yaml"
+
+      - name: Deploy Kafka Topic
+        run: |
+          kafka-topics.sh --bootstrap-server "${{ env.KAFKA_BROKER }}:${{ env.KAFKA_PORT }}" \
+            --create \
+            --topic "${{ env.TOPIC_NAME }}" \
+            --partitions ${{ github.event.inputs.partitions }} \
+            --replication-factor ${{ github.event.inputs.replication_factor }}
+          echo "Kafka topic ${{ env.TOPIC_NAME }} deployed successfully."
+
+      - name: Commit and Push Changes
+        if: env.EXISTS == 'false'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add ./Dev/${{ env.TOPIC_NAME }}
+          git commit -m "Added details for Kafka topic ${{ env.TOPIC_NAME }}"
+          git push
